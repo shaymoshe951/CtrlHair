@@ -72,9 +72,13 @@ def get_node(albedo_landmark, face_landmark, imgWidth, imgHeight, saveFolder, nu
     fid.close()
     fid_1.close()
 
-    triangle_exe_file = os.path.join(os.path.split(__file__)[0], 'triangle_berkeley/triangle')
-    os.system('chmod u+x ' + triangle_exe_file)
-    cmd_2 = triangle_exe_file + ' -q30 ' + os.path.join(saveFolder, 'albedo_landmarks')  + ' >/dev/null 2>&1'
+    # Shay - replacing with python
+    # triangle_exe_file = os.path.join(os.path.split(__file__)[0], 'triangle_berkeley/triangle')
+    # os.system('chmod u+x ' + triangle_exe_file)
+    # cmd_2 = triangle_exe_file + ' -q30 ' + os.path.join(saveFolder, 'albedo_landmarks')  + ' >/dev/null 2>&1'
+    # os.system(cmd_2)
+    triangle_exe_file = os.path.join(os.path.split(__file__)[0], 'triangle_berkeley/triangle_cli.py')
+    cmd_2 = r'C:\Users\Lab\AppData\Local\Microsoft\WindowsApps\python3.13.exe ' + triangle_exe_file + ' -q30 ' + os.path.join(saveFolder, 'albedo_landmarks')  # + ' >nul 2>&1'
     os.system(cmd_2)
 
     # create triangle

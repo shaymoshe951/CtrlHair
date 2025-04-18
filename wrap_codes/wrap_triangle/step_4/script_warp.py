@@ -36,7 +36,7 @@ for item in faceList:
     UV = np.reshape(UV, (-1, 2))
 
     get_warpedImage(UV, imgWidth, imgHeight, subFolder, saveSubFolder)
-    albedo_img = cv2.imread(os.path.join(saveSubFolder, 'albedo.png')).astype(np.float)
-    combine_img = 0.5*img.astype(np.float) + 0.5*albedo_img
+    albedo_img = cv2.imread(os.path.join(saveSubFolder, 'albedo.png')).astype(float)
+    combine_img = 0.5*img.astype(float) + 0.5*albedo_img
     cv2.imwrite(os.path.join(saveSubFolder, 'combine_albedo.png'), combine_img.astype(np.uint8))
     

@@ -9,6 +9,7 @@
 
 import sys
 sys.path.append('.')
+sys.path.append('..\\')
 
 from global_value_utils import TEMP_FOLDER
 import argparse
@@ -116,8 +117,8 @@ class Example(QWidget):
                     continue
                 num = col_num * row + col
                 sld = QSlider(Qt.Horizontal, self)
-                sld.setMinimum(-self.maximum_value * 100)
-                sld.setMaximum(self.maximum_value * 100)
+                sld.setMinimum(int(-self.maximum_value * 100))
+                sld.setMaximum(int(self.maximum_value * 100))
                 sld.sliderMoved[int].connect(self.evt_change_value)
                 self.sld2val[sld] = num
                 self.val2sld[num] = sld
@@ -223,7 +224,7 @@ class Example(QWidget):
 
         # curliness
         idx += len(self.label_shape)
-        self.val2sld[idx].setValue(self.backend.get_curliness_be2fe() * 100)
+        self.val2sld[idx].setValue(int(self.backend.get_curliness_be2fe() * 100))
         #  texture
         idx += len(self.label_curliness)
         app_val = self.backend.get_texture_be2fe()

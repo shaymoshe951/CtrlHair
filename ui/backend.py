@@ -27,7 +27,6 @@ from wrap_codes.mask_adaptor import wrap_by_imgs
 from hair_editor import HairEditor
 from util.color_from_hsv_to_gaussian import DistTranslation
 
-
 class LatentRepresentation:
     def __init__(self):
         self.color = None

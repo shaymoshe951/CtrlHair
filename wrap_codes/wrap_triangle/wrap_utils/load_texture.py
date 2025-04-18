@@ -43,7 +43,7 @@ def loadTexture_simple(obj, albedoName, labelName):
     for item in range(1, numLabels):
         tmpInd = (label == allLabels[item])[..., None]
         texture['label_{:01d}'.format(int(item))] = \
-            textureSampling(tmpInd.astype(np.float), texture['uv'])
+            textureSampling(tmpInd.astype(float), texture['uv'])
     # ----------------------------------------------------------
     # labelVis = 1.0*cv2.imread(labelVisName)/255.0
     # labelVis = cv2.flip(labelVis,0)
@@ -76,7 +76,7 @@ def loadTexture(obj, albedoName, labelName, labelVisName):
     for item in range(1, numLabels):
         tmpInd = (label == allLabels[item])[..., None]
         texture['label_{:01d}'.format(int(item))] = \
-            textureSampling(tmpInd.astype(np.float), texture['uv'])
+            textureSampling(tmpInd.astype(float), texture['uv'])
     # ----------------------------------------------------------
     labelVis = 1.0 * cv2.imread(labelVisName) / 255.0
     labelVis = cv2.flip(labelVis, 0)

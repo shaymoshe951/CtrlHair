@@ -22,7 +22,7 @@ def get_warpedImage(UV, imgWidth, imgHeight, savePath, target_img):
     # if not os.path.exists(saveLabelPath):
     #    os.makedirs(saveLabelPath)
 
-    target_img = target_img.astype(np.float) / 255.0
+    target_img = target_img.astype(float) / 255.0
     outImg = textureSampling(target_img, UV)
     outImg = np.reshape(outImg, (imgWidth, imgHeight, -1))
 

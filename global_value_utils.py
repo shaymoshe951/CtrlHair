@@ -18,7 +18,7 @@ DEFAULT_CONFIG_COLOR_TEXTURE_BRANCH = '045'
 DEFAULT_CONFIG_SHAPE_BRANCH = '054'
 ########################################################
 
-TEMP_FOLDER = 'temp_folder'
+TEMP_FOLDER = r'D:\projects\CtrlHair\temp_folder' # Shay Change. Original: 'temp_folder'
 
 PARSING_COLOR_LIST = [[0, 0, 0],
                       [204, 0, 0],

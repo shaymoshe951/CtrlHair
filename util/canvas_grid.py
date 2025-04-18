@@ -21,7 +21,7 @@ class Canvas:
         self.canvas = np.ones((row * img_size, col * img_size + margin * (col - 1), 3), dtype='uint8') * 255
 
     def process_draw_image(self, img, i, j):
-        if img.dtype in [np.float32, np.float, np.float64]:
+        if img.dtype in [np.float32, float, np.float64]:
             if img.min() < 0:
                 img = img * 127.5 + 127.5
             elif img.max() <= 1:

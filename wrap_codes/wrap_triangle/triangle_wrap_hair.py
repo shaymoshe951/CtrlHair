@@ -56,11 +56,16 @@ def get_wrap_UV(landmark_source, landmark_target, wrap_img, warp_temp_folder=Non
     correspondence_path = os.path.join(warp_temp_folder, 'correspondence.txt')
     wrap_name = os.path.join(warp_temp_folder, 'arap.obj')
 
-    exe_file = os.path.join(os.path.split(__file__)[0], 'libigl_arap/my_arap ')
-    os.system('chmod u+x ' + exe_file)
-    cmd = exe_file + \
-          triangle_path + ' ' + correspondence_path + ' ' \
-          + wrap_name + ' ' + str(W) + ' ' + str(H) + ' >/dev/null 2>&1'
+    # Replacing with running python similar API
+    # exe_file = os.path.join(os.path.split(__file__)[0], 'libigl_arap/my_arap ')
+    # os.system('chmod u+x ' + exe_file)
+    # cmd = exe_file + \
+    #       triangle_path + ' ' + correspondence_path + ' ' \
+    #       + wrap_name + ' ' + str(W) + ' ' + str(H) + ' >/dev/null 2>&1'
+    # Shay replacement
+    landmark_str = str(W) + ' ' + str(H) # + ' >nul 2>&1'
+    exe_file = os.path.join(os.path.split(__file__)[0], 'libigl_arap/my_arap.py ')
+    cmd = r"C:\Users\Lab\AppData\Local\Microsoft\WindowsApps\python3.13.exe" + f" {exe_file} {triangle_path} {correspondence_path} {wrap_name} {landmark_str}"
     os.system(cmd)
 
     # wrap
@@ -95,7 +100,7 @@ def wrap_by_uv(UV, triangle_path, wrap_name, landmark_source, landmark_target, w
     (H, W) = wrap_img.shape[:2]
 
     # get_warpedImage
-    wrap_img = wrap_img.astype(np.float)
+    wrap_img = wrap_img.astype(float)
     out_img = textureSampling(wrap_img, UV)
     out_img = np.reshape(out_img, (W, H, -1))
 
