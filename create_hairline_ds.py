@@ -112,7 +112,6 @@ class MainWindow(QWidget):
 
                     self._save_images(filename, input_parsing_show, output_img, delta)
 
-                time.sleep(2)
 
     def _save_images(self, base_image_fn, input_parsing_show, output_img, delta):
         target_folder_seg = os.path.join(self.output_folder, 'segments'

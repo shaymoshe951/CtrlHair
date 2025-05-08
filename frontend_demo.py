@@ -40,7 +40,7 @@ class Example(QWidget):
         self.backend = Backend(self.maximum_value, blending=self.blending)
         self.initUI()
         self.target_size = 256
-        self.need_crop = args.need_crop
+        self.need_crop = False #args.need_crop
         if not os.path.exists(self.temp_path):
             os.makedirs(self.temp_path)
         self.font = QFont()

@@ -105,9 +105,10 @@ class Example(QWidget):
         self.maximum_value = 2.0
         self.blending = not args.no_blending
         self.backend = Backend(self.maximum_value, blending=self.blending)
-        self.initUI()
         self.target_size = 256
-        self.need_crop = args.need_crop
+        self.present_resolution = 256
+        self.initUI()
+        self.need_crop = False # args.need_crop
         if not os.path.exists(self.temp_path):
             os.makedirs(self.temp_path)
         self.font = QFont()
@@ -132,7 +133,7 @@ class Example(QWidget):
         #     self.grid1.addWidget(QLabel(tags[idx]), 0, idx)
         for idx in range(len(self.labels)):
             self.grid1.addWidget(self.labels[idx], 1, idx, alignment=Qt.AlignTop)
-            self.labels[idx].setFixedSize(256, 256)
+            self.labels[idx].setFixedSize(self.present_resolution, self.present_resolution)
 
         self.btn_open_target = QPushButton('Target Image', self)
         self.btn_open_target.clicked[bool].connect(self.evt_open_target)

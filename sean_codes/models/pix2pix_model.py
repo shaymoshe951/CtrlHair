@@ -132,7 +132,7 @@ class Pix2PixModel(torch.nn.Module):
         bs, _, h, w = label_map.size()
         nc = self.opt.label_nc + 1 if self.opt.contain_dontcare_label \
             else self.opt.label_nc
-        input_label = self.FloatTensor(bs, nc, h, w).zero_()
+        input_label = torch.zeros((bs, nc, h, w), dtype=torch.float, device='cuda')
         input_semantics = input_label.scatter_(1, label_map, 1.0)
 
         # concatenate instance map if it exists

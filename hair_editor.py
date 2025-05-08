@@ -171,7 +171,7 @@ class HairEditor:
 
         data = {'label': torch.tensor(parsing, dtype=torch.float32),
                 'instance': torch.tensor(0),
-                'image': torch.tensor(temp_face_image, dtype=torch.float32),
+                'image': temp_face_image.clone().detach().to(dtype=torch.float32), #torch.tensor(temp_face_image, dtype=torch.float32),
                 'obj_dic': obj_dic}
         change_status(self.sean_model, 'UI_mode')
         # self.model = self.model.to(code.device)
