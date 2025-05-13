@@ -27,10 +27,12 @@ from util.imutil import read_rgb, write_rgb
 
 from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QApplication, QLabel, QGridLayout, \
     QSlider, QFileDialog, QGraphicsPixmapItem
-from PyQt5.QtGui import QPixmap, QFont, QPainter, QMouseEvent, QPalette, QColor
+from PyQt5.QtGui import QPixmap, QImage, QFont, QPainter, QMouseEvent, QPalette, QColor
 from PyQt5.QtCore import Qt
 import colorsys
 import numpy as np
+from sai_if import change_style
+from PIL import Image
 
 # Define hair color palettes
 PALETTES = {
@@ -104,7 +106,31 @@ class DragLabel(QLabel):
         self.setMouseTracking(False)
         super().mouseReleaseEvent(e)
         self.parent.is_overlay_segment_on_output = False
-        self.parent.evt_output()
+        # self.parent.evt_output()
+        input_mask = self.parent.backend.get_cur_mask()
+        input_mask_fpn = os.path.join(self.parent.temp_path, 'input_parsing.png')
+        write_rgb(input_mask_fpn, input_mask)
+        input_img_fpn = os.path.join(self.parent.temp_path, 'input_img.png')
+        output_fpn = change_style(input_img_fpn, input_mask_fpn, self.parent.temp_path)
+        # output_fpn = self.parent.temp_path + r'\edited_input_img_2825922642.jpeg'
+        img = Image.open(output_fpn).resize((self.parent.present_resolution, self.parent.present_resolution), Image.Resampling.LANCZOS)
+
+        # mask = Image.open(input_mask_fpn)
+        # img_org = Image.open(input_img_fpn)
+        # img_gt_np = np.array(img_org)
+        # img_np = np.array(img)
+        # mask_np = np.array(mask) / 255.0
+        #
+        # m_exp = np.expand_dims(mask_np[:, :, 2], 2)
+        # new_img = img_gt_np * (1.0 - m_exp) + img_np * m_exp
+        new_img = img
+
+        data = Image.fromarray(np.uint8(new_img)).tobytes("raw", "RGBA")
+        qimage = QImage(data, img.width, img.height, QImage.Format_RGBA8888)
+        pixmap = QPixmap.fromImage(qimage)
+        self.parent.output_pixmap = pixmap
+        self.parent.lbl_out_img.setPixmap(self.parent.output_pixmap)
+
 
 def merge_pixmaps(base_pixmap: QPixmap,
                   overlay_pixmap: QPixmap,
