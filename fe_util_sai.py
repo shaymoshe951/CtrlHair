@@ -1,27 +1,22 @@
 # -*- coding: utf-8 -*-
 
 """
-# File name:    frontend.py
-# Time :        2022/2/20 15:58
-# Author:       xyguoo@163.com
-# Description:  This is the demo frontend
+# File name:    fe_util_sai.py
+# Time :        2025/5/13
+# Author:       shay.moshe@gmail.com
+# Description:  This is the frontend app.
 """
 
 import sys
+
+from vers_image import VersImage
+
 sys.path.append('.')
 sys.path.append('..\\')
 
 from global_value_utils import TEMP_FOLDER
-import argparse
 import os
 
-from util.common_options import ctrl_hair_parser_options
-
-parser = argparse.ArgumentParser()
-ctrl_hair_parser_options(parser)
-
-args = parser.parse_args()
-os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 from ui.backend import Backend
 from util.imutil import read_rgb, write_rgb
 
@@ -86,17 +81,18 @@ class DragLabel(QLabel):
             raise Exception('not implemented')
 
         print("Dragging at", pos.x(), pos.y(), delta)
+        # update slider & value
         vm = self.parent.val2sld[5].value()  + delta * 2
         self.parent.val2sld[5].setValue(vm)
         self.parent.backend.change_shape(vm/100.0, 1)
+        # update mask
         input_parsing_show = self.parent.backend.get_cur_mask()
         input_parsing_path = os.path.join(self.parent.temp_path, 'input_parsing.png')
         write_rgb(input_parsing_path, input_parsing_show)
         self.parent.lbl_input_seg.setPixmap((QPixmap(input_parsing_path)))
-
+        # update output with merged mask
         output_img_merged = merge_pixmaps(self.parent.output_pixmap, self.parent.lbl_input_seg.pixmap())
         self.parent.lbl_out_img.setPixmap(output_img_merged)
-
 
         super().mouseMoveEvent(e)
 
@@ -106,7 +102,7 @@ class DragLabel(QLabel):
         self.setMouseTracking(False)
         super().mouseReleaseEvent(e)
         self.parent.is_overlay_segment_on_output = False
-        # self.parent.evt_output()
+        # self.parent.evt_output() # recalc output using CtrlHair
         input_mask = self.parent.backend.get_cur_mask()
         input_mask_fpn = os.path.join(self.parent.temp_path, 'input_parsing.png')
         write_rgb(input_mask_fpn, input_mask)
@@ -151,14 +147,18 @@ def merge_pixmaps(base_pixmap: QPixmap,
 class Example(QWidget):
     def __init__(self):
         super().__init__()
+
+        self.data = {'original' : {'image':None, 'mask':None, 'slider':None},
+                     'postprocessed' : {}, 'output' : {}}
+
         self.temp_path = os.path.join(TEMP_FOLDER, 'demo_output')
         self.maximum_value = 2.0
-        self.blending = not args.no_blending
+        self.blending = True
         self.backend = Backend(self.maximum_value, blending=self.blending)
         self.target_size = 256
         self.present_resolution = 256
         self.initUI()
-        self.need_crop = False # args.need_crop
+        self.need_crop = False
         if not os.path.exists(self.temp_path):
             os.makedirs(self.temp_path)
         self.font = QFont()
@@ -328,8 +328,9 @@ class Example(QWidget):
         fname = QFileDialog.getOpenFileName(self, 'Open image file')
         if fname[0]:
             input_name = fname[0]
+            self.data['original']['image'] = VersImage(input_name)
             self.input_name = input_name
-            self.load_input_image(input_name)
+            self.load_input_image()
             self.btn_output.setEnabled(True)
             if self.target_name is not None:
                 self.btn_trans_color.setEnabled(True)
@@ -366,18 +367,21 @@ class Example(QWidget):
         write_rgb(input_parsing_path, input_parsing_show)
         self.lbl_input_seg.setPixmap((QPixmap(input_parsing_path)))
 
-    def load_input_image(self, img_path):
-        img = read_rgb(img_path)
+    def load_input_image(self):
+        img = self.data['original']['image'].to_numpy()
         if self.need_crop:
             img = self.backend.crop_face(img)
         input_img, input_parsing_show = self.backend.set_input_img(img_rgb=img)
-        input_path = os.path.join(self.temp_path, 'input_img.png')
-        write_rgb(input_path, input_img)
-        self.lbl_input_img.setPixmap((QPixmap(input_path)))
+        self.data['original']['mask'] = VersImage.from_numpy(input_parsing_show)
+        # input_path = os.path.join(self.temp_path, 'input_img.png')
+        # write_rgb(input_path, input_img)
+        # self.lbl_input_img.setPixmap((QPixmap(input_path)))
+        self.data['original']['image'].set_pixmap(self.lbl_input_img)
 
-        input_parsing_path = os.path.join(self.temp_path, 'input_parsing.png')
-        write_rgb(input_parsing_path, input_parsing_show)
-        self.lbl_input_seg.setPixmap((QPixmap(input_parsing_path)))
+        # input_parsing_path = os.path.join(self.temp_path, 'input_parsing.png')
+        # write_rgb(input_parsing_path, input_parsing_show)
+        # self.lbl_input_seg.setPixmap((QPixmap(input_parsing_path)))
+        self.data['original']['mask'].set_pixmap(self.lbl_input_seg)
         self.refresh_slider()
 
         self.lbl_out_img.setPixmap(QPixmap(None))
@@ -468,6 +472,8 @@ class Example(QWidget):
         if sld_idx < len(self.label_app):
             self.backend.change_texture(v, sld_idx)
             return
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 def main():

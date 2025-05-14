@@ -8,7 +8,7 @@
 """
 
 import sys
-sys.path.append('ui')
+sys.path.append('../ui')
 sys.path.append('\\')
 
 from global_value_utils import TEMP_FOLDER
