@@ -203,21 +203,6 @@ class Example(QWidget):
 
         self.grid2 = QGridLayout()
 
-        self.btn_trans_color = QPushButton('Transfer Color', self)
-        self.btn_trans_color.clicked[bool].connect(self.evt_trans_color)
-        self.grid2.addWidget(self.btn_trans_color, 10, 0)
-        self.btn_trans_color.setEnabled(False)
-
-        self.btn_trans_texture = QPushButton('Transfer Texture', self)
-        self.btn_trans_texture.clicked[bool].connect(self.evt_trans_texture)
-        self.grid2.addWidget(self.btn_trans_texture, 10, 1)
-        self.btn_trans_texture.setEnabled(False)
-
-        self.btn_trans_shape = QPushButton('Transfer Shape', self)
-        self.btn_trans_shape.clicked[bool].connect(self.evt_trans_shape)
-        self.grid2.addWidget(self.btn_trans_shape, 10, 2)
-        self.btn_trans_shape.setEnabled(False)
-
         self.sld2val = {}
         self.val2sld = {}
 
@@ -351,36 +336,14 @@ class Example(QWidget):
             output_img_merged = self.output_pixmap
         self.lbl_out_img.setPixmap(output_img_merged)
 
-    def evt_trans_color(self):
-        self.backend.transfer_latent_representation('color')
-        self.refresh_slider()
-
-    def evt_trans_texture(self):
-        self.backend.transfer_latent_representation('texture')
-        self.refresh_slider()
-
-    def evt_trans_shape(self):
-        self.backend.transfer_latent_representation('shape', refresh=True)
-        self.refresh_slider()
-        input_parsing_show = self.backend.get_cur_mask()
-        input_parsing_path = os.path.join(self.temp_path, 'input_parsing.png')
-        write_rgb(input_parsing_path, input_parsing_show)
-        self.lbl_input_seg.setPixmap((QPixmap(input_parsing_path)))
-
     def load_input_image(self):
         img = self.data['original']['image'].to_numpy()
         if self.need_crop:
             img = self.backend.crop_face(img)
         input_img, input_parsing_show = self.backend.set_input_img(img_rgb=img)
         self.data['original']['mask'] = VersImage.from_numpy(input_parsing_show)
-        # input_path = os.path.join(self.temp_path, 'input_img.png')
-        # write_rgb(input_path, input_img)
-        # self.lbl_input_img.setPixmap((QPixmap(input_path)))
         self.data['original']['image'].set_pixmap(self.lbl_input_img)
 
-        # input_parsing_path = os.path.join(self.temp_path, 'input_parsing.png')
-        # write_rgb(input_parsing_path, input_parsing_show)
-        # self.lbl_input_seg.setPixmap((QPixmap(input_parsing_path)))
         self.data['original']['mask'].set_pixmap(self.lbl_input_seg)
         self.refresh_slider()
 
