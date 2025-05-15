@@ -106,23 +106,17 @@ class DragLabel(QLabel):
         else:
             # Get updated mask
             current_vmask = self.parent.data['output']['mask']
-            # output_vimage = change_style(self.parent.data['original']['image'], current_vmask)
-            output_vimage = VersImage(self.parent.temp_path + r'\edited_input_img_2825922642.jpeg') # Tmp
+            output_vimage = change_style(self.parent.data['original']['image'], current_vmask)
+            # output_vimage = VersImage(self.parent.temp_path + r'\edited_input_img_2825922642.jpeg') # Tmp
             output_vimage = output_vimage.resize((self.parent.present_resolution, self.parent.present_resolution))
             if self.parent.config_enfore_identity_based_on_mask:
                 binary_mask_inp = self.parent.data['original']['mask'].to_numpy()[:,:,2] > 127
                 binary_mask_cur = current_vmask.to_numpy()[:,:,2] > 127
                 binary_mask_comb = np.logical_or(binary_mask_inp , binary_mask_cur)
                 m_exp = np.expand_dims(binary_mask_comb, 2).astype(int)
-                new_img = self.parent.data['original']['image'].resize((self.parent.present_resolution, self.parent.present_resolution)).to_numpy() * (1.0 - m_exp) + output_vimage.to_numpy() * m_exp
-            else:
-                new_img = output_vimage
+                new_img_np = self.parent.data['original']['image'].resize((self.parent.present_resolution, self.parent.present_resolution)).to_numpy() * (1.0 - m_exp) + output_vimage.to_numpy() * m_exp
+                output_vimage = VersImage.from_numpy(np.uint8( new_img_np ))
 
-            # data = Image.fromarray(np.uint8(new_img)).tobytes("raw", "RGBA")
-            # qimage = QImage(data, img.width, img.height, QImage.Format_RGBA8888)
-            # pixmap = QPixmap.fromImage(qimage)
-            # self.parent.output_pixmap = pixmap
-            # self.parent.lbl_out_img.setPixmap(self.parent.output_pixmap)
             output_vimage.set_pixmap(self.parent.lbl_out_img)
 
 

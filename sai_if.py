@@ -8,7 +8,7 @@ import time
 
 from vers_image import VersImage
 
-STABILITY_KEY = 'sk-gGx6H0tP47ZZivNOoRw5VOGnwVx4Js8L8v5GYBwEiedQvESv'
+STABILITY_KEY = 'sk-NgoF97Yb0gQNiCDdgM0tTe5f927fuZbJi141jkphYleDOoHk'
 
 
 
@@ -132,7 +132,8 @@ def change_style(input_img, style_img, resolution=(512,512)):
     seed = 0 #@param {type:"integer"}
     output_format = "jpeg" #@param ["webp", "jpeg", "png"]
 
-    host = f"https://api.stability.ai/v2beta/stable-image/control/style-transfer"
+    # host = f"https://api.stability.ai/v2beta/stable-image/control/style-transfer"
+    host = f"https://172.64.153.32/v2beta/stable-image/control/style-transfer"
 
     params = {
         "change_strength" : change_strength,
@@ -142,12 +143,14 @@ def change_style(input_img, style_img, resolution=(512,512)):
         "negative_prompt" : negative_prompt,
         "seed" : seed,
         "style_strength" : style_strength,
-        "output_resolution" : f"{resolution[0]}x{resolution[1]}"
+        # "output_resolution" : f"{resolution[0]}x{resolution[1]}"
     }
 
     files = {}
-    files["init_image"] = input_img.to_streamio(output_format) # open(input_img, 'rb')
-    files["style_image"] = style_img.to_streamio(output_format) # open(style_img, 'rb')
+    # files["init_image"] = input_img.to_streamio(output_format) # open(input_img, 'rb')
+    # files["style_image"] = style_img.to_streamio(output_format) # open(style_img, 'rb')
+    files["init_image"] = open(r"D:\projects\CtrlHair\temp_folder\demo_output\input_img.png", 'rb')
+    files["style_image"] = open(r"D:\projects\CtrlHair\temp_folder\demo_output\input_parsing.png", 'rb')
 
     response = send_generation_request(
         host,
@@ -165,5 +168,4 @@ def change_style(input_img, style_img, resolution=(512,512)):
         raise Warning("Generation failed NSFW classifier")
 
     return output_image
-
 
