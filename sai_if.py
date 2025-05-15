@@ -6,6 +6,8 @@ from PIL import Image
 import requests
 import time
 
+from vers_image import VersImage
+
 STABILITY_KEY = 'sk-gGx6H0tP47ZZivNOoRw5VOGnwVx4Js8L8v5GYBwEiedQvESv'
 
 
@@ -108,15 +110,20 @@ def send_async_generation_request(
 
     return response
 
+def change_style_using_image_filenames(input_img_fn, style_img_fn):
+    # input_img = r"C:\Temp\pics\Different_hairline_db\outputbangs0\ChatGPT Image Apr 14, 2025, 07_59_20 AM.png" #@param {type:"string"}
+    # style_img = r"C:\Temp\pics\Different_hairline_db\segmentsbangs1\ChatGPT Image Apr 14, 2025, 07_59_20 AM.png" #@param {type:"string"}
+    input_img = VersImage(input_img_fn)
+    style_img = VersImage(style_img_fn)
+    return change_style(input_img, style_img)
+
 #@title Style Transfer
 
 #@markdown - Drag and drop image to file folder on left
 #@markdown - Right click it and choose Copy path
 #@markdown - Paste that path into image field below
 #@markdown <br><br>
-def change_style(input_img, style_img, output_folder):
-    # input_img = r"C:\Temp\pics\Different_hairline_db\outputbangs0\ChatGPT Image Apr 14, 2025, 07_59_20 AM.png" #@param {type:"string"}
-    # style_img = r"C:\Temp\pics\Different_hairline_db\segmentsbangs1\ChatGPT Image Apr 14, 2025, 07_59_20 AM.png" #@param {type:"string"}
+def change_style(input_img, style_img, resolution=(512,512)):
     prompt = "" #@param {type:"string"}
     negative_prompt = "" #@param {type:"string"}
     style_strength = 0.8   #@param {type:"slider", min:0, max:1, step:0.05}
@@ -135,12 +142,12 @@ def change_style(input_img, style_img, output_folder):
         "negative_prompt" : negative_prompt,
         "seed" : seed,
         "style_strength" : style_strength,
-        "output_resolution" : "512x512"
+        "output_resolution" : f"{resolution[0]}x{resolution[1]}"
     }
 
     files = {}
-    files["init_image"] = open(input_img, 'rb')
-    files["style_image"] = open(style_img, 'rb')
+    files["init_image"] = input_img.to_streamio(output_format) # open(input_img, 'rb')
+    files["style_image"] = style_img.to_streamio(output_format) # open(style_img, 'rb')
 
     response = send_generation_request(
         host,
@@ -149,20 +156,14 @@ def change_style(input_img, style_img, output_folder):
     )
 
     # Decode response
-    output_image = response.content
+    output_image = VersImage.from_binary(response.content)
     finish_reason = response.headers.get("finish-reason")
-    seed = response.headers.get("seed")
+    # seed = response.headers.get("seed")
 
     # Check for NSFW classification
     if finish_reason == 'CONTENT_FILTERED':
         raise Warning("Generation failed NSFW classifier")
 
-    # Save and display result
-    filename, _ = os.path.splitext(os.path.basename(input_img))
-    edited = os.path.join(output_folder, f"edited_{filename}_{seed}.{output_format}")
-    with open(edited, "wb") as f:
-        f.write(output_image)
+    return output_image
 
-    print(f"Saved image {edited}")
-    return edited
 

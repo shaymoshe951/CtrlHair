@@ -87,12 +87,11 @@ class DragLabel(QLabel):
         self.parent.backend.change_shape(vm/100.0, 1)
         # update mask
         input_parsing_show = self.parent.backend.get_cur_mask()
-        input_parsing_path = os.path.join(self.parent.temp_path, 'input_parsing.png')
-        write_rgb(input_parsing_path, input_parsing_show)
-        self.parent.lbl_input_seg.setPixmap((QPixmap(input_parsing_path)))
+        mask_vimage = VersImage.from_numpy(input_parsing_show)
+        self.parent.data['output']['mask'] = mask_vimage
         # update output with merged mask
-        output_img_merged = merge_pixmaps(self.parent.output_pixmap, self.parent.lbl_input_seg.pixmap())
-        self.parent.lbl_out_img.setPixmap(output_img_merged)
+        output_vimage = self.parent.data['output']['raw_image'].merge_image(mask_vimage)
+        output_vimage.set_pixmap(self.parent.lbl_out_img)
 
         super().mouseMoveEvent(e)
 
@@ -102,47 +101,30 @@ class DragLabel(QLabel):
         self.setMouseTracking(False)
         super().mouseReleaseEvent(e)
         self.parent.is_overlay_segment_on_output = False
-        # self.parent.evt_output() # recalc output using CtrlHair
-        input_mask = self.parent.backend.get_cur_mask()
-        input_mask_fpn = os.path.join(self.parent.temp_path, 'input_parsing.png')
-        write_rgb(input_mask_fpn, input_mask)
-        input_img_fpn = os.path.join(self.parent.temp_path, 'input_img.png')
-        output_fpn = change_style(input_img_fpn, input_mask_fpn, self.parent.temp_path)
-        # output_fpn = self.parent.temp_path + r'\edited_input_img_2825922642.jpeg'
-        img = Image.open(output_fpn).resize((self.parent.present_resolution, self.parent.present_resolution), Image.Resampling.LANCZOS)
+        if self.parent.config_flexible_edit:
+            self.parent.evt_output() # recalc output using CtrlHair
+        else:
+            # Get updated mask
+            current_vmask = self.parent.data['output']['mask']
+            # output_vimage = change_style(self.parent.data['original']['image'], current_vmask)
+            output_vimage = VersImage(self.parent.temp_path + r'\edited_input_img_2825922642.jpeg') # Tmp
+            output_vimage = output_vimage.resize((self.parent.present_resolution, self.parent.present_resolution))
+            if self.parent.config_enfore_identity_based_on_mask:
+                binary_mask_inp = self.parent.data['original']['mask'].to_numpy()[:,:,2] > 127
+                binary_mask_cur = current_vmask.to_numpy()[:,:,2] > 127
+                binary_mask_comb = np.logical_or(binary_mask_inp , binary_mask_cur)
+                m_exp = np.expand_dims(binary_mask_comb, 2).astype(int)
+                new_img = self.parent.data['original']['image'].resize((self.parent.present_resolution, self.parent.present_resolution)).to_numpy() * (1.0 - m_exp) + output_vimage.to_numpy() * m_exp
+            else:
+                new_img = output_vimage
 
-        # mask = Image.open(input_mask_fpn)
-        # img_org = Image.open(input_img_fpn)
-        # img_gt_np = np.array(img_org)
-        # img_np = np.array(img)
-        # mask_np = np.array(mask) / 255.0
-        #
-        # m_exp = np.expand_dims(mask_np[:, :, 2], 2)
-        # new_img = img_gt_np * (1.0 - m_exp) + img_np * m_exp
-        new_img = img
+            # data = Image.fromarray(np.uint8(new_img)).tobytes("raw", "RGBA")
+            # qimage = QImage(data, img.width, img.height, QImage.Format_RGBA8888)
+            # pixmap = QPixmap.fromImage(qimage)
+            # self.parent.output_pixmap = pixmap
+            # self.parent.lbl_out_img.setPixmap(self.parent.output_pixmap)
+            output_vimage.set_pixmap(self.parent.lbl_out_img)
 
-        data = Image.fromarray(np.uint8(new_img)).tobytes("raw", "RGBA")
-        qimage = QImage(data, img.width, img.height, QImage.Format_RGBA8888)
-        pixmap = QPixmap.fromImage(qimage)
-        self.parent.output_pixmap = pixmap
-        self.parent.lbl_out_img.setPixmap(self.parent.output_pixmap)
-
-
-def merge_pixmaps(base_pixmap: QPixmap,
-                  overlay_pixmap: QPixmap,
-                  x: int = 0, y: int = 0,
-                  opacity: float = 0.3) -> QPixmap:
-    """
-    Draws overlay_pixmap on top of base_pixmap at (x,y) with the given opacity.
-    Returns a new QPixmap.
-    """
-    # Make a copy of the base so we don’t modify the originals
-    result = QPixmap(base_pixmap)
-    painter = QPainter(result)
-    painter.setOpacity(opacity)                # how transparent the overlay is
-    painter.drawPixmap(x, y, overlay_pixmap)   # paint the overlay
-    painter.end()
-    return result
 
 class Example(QWidget):
     def __init__(self):
@@ -154,6 +136,8 @@ class Example(QWidget):
         self.temp_path = os.path.join(TEMP_FOLDER, 'demo_output')
         self.maximum_value = 2.0
         self.blending = True
+        self.config_flexible_edit = False
+        self.config_enfore_identity_based_on_mask = False
         self.backend = Backend(self.maximum_value, blending=self.blending)
         self.target_size = 256
         self.present_resolution = 256
@@ -166,11 +150,9 @@ class Example(QWidget):
         self.setFont(self.font)
 
         self.input_name = None
-        self.target_name = None
         self.output_pixmap = None
 
     def initUI(self):
-        # self.lbl_target_img = QLabel(self)
         self.lbl_input_img = QLabel(self)
         self.lbl_input_seg = QLabel(self)
         self.lbl_out_img = DragLabel(self) # QLabel(self)
@@ -179,16 +161,9 @@ class Example(QWidget):
                        self.lbl_input_seg, self.lbl_out_img]
 
         self.grid1 = QGridLayout()
-        # tags = ['target image', 'input image', 'hair shape', 'color_texture']
-        # for idx in range(len(self.labels)):
-        #     self.grid1.addWidget(QLabel(tags[idx]), 0, idx)
         for idx in range(len(self.labels)):
             self.grid1.addWidget(self.labels[idx], 1, idx, alignment=Qt.AlignTop)
             self.labels[idx].setFixedSize(self.present_resolution, self.present_resolution)
-
-        # self.btn_open_target = QPushButton('Target Image', self)
-        # self.btn_open_target.clicked[bool].connect(self.evt_open_target)
-        # self.grid1.addWidget(self.btn_open_target, 0, 0)
 
         self.btn_open_input = QPushButton('Input Image', self)
         self.btn_open_input.clicked[bool].connect(self.evt_open_input)
@@ -229,7 +204,6 @@ class Example(QWidget):
                 sld.sliderMoved[int].connect(self.evt_change_value)
                 self.sld2val[sld] = num
                 self.val2sld[num] = sld
-                # self.grid2.addWidget(QLabel(self.label_total[num]), row * 2 + 2, col)
                 new_button = QPushButton(self.label_total[num], self)
                 self.but2val[new_button] = num
                 self.val2but[num] = new_button
@@ -277,15 +251,11 @@ class Example(QWidget):
         self.show()
 
     def evt_push_controls(self):
+        self.is_overlay_segment_on_output = not self.is_overlay_segment_on_output
         if self.output_pixmap is None:
             self.evt_output()
         ctrl_num = self.but2val[self.sender()]
-        self.is_overlay_segment_on_output = not self.is_overlay_segment_on_output
-        if self.is_overlay_segment_on_output:
-            output_img_merged = merge_pixmaps(self.output_pixmap, self.lbl_input_seg.pixmap())
-        else:
-            output_img_merged = self.output_pixmap
-        self.lbl_out_img.setPixmap(output_img_merged)
+        # TODO: Add ctrl per sender
 
     def evt_btn_color_click(self):
         btn = self.sender()
@@ -298,17 +268,6 @@ class Example(QWidget):
         self.evt_output()
         self._update_rgb_btn()
 
-
-    def evt_open_target(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open image file')
-        if fname[0]:
-            self.target_name = fname[0]
-            self.load_target_image(fname[0])
-            if self.input_name is not None:
-                self.btn_trans_color.setEnabled(True)
-                self.btn_trans_shape.setEnabled(True)
-                self.btn_trans_texture.setEnabled(True)
-
     def evt_open_input(self):
         fname = QFileDialog.getOpenFileName(self, 'Open image file')
         if fname[0]:
@@ -317,24 +276,23 @@ class Example(QWidget):
             self.input_name = input_name
             self.load_input_image()
             self.btn_output.setEnabled(True)
-            if self.target_name is not None:
-                self.btn_trans_color.setEnabled(True)
-                self.btn_trans_shape.setEnabled(True)
-                self.btn_trans_texture.setEnabled(True)
 
             for kk in self.sld2val:
                 kk.setEnabled(True)
 
     def evt_output(self):
         output_img = self.backend.output()
-        img_path = os.path.join(self.temp_path, 'out_img.png')
-        write_rgb(img_path, output_img)
-        self.output_pixmap = QPixmap(img_path)
+        output_raw_vimage = VersImage.from_numpy(output_img)
+        # img_path = os.path.join(self.temp_path, 'out_img.png')
+        # write_rgb(img_path, output_img)
+        # self.output_pixmap = QPixmap(img_path)
         if self.is_overlay_segment_on_output:
-            output_img_merged = merge_pixmaps(self.output_pixmap, self.lbl_input_seg.pixmap())
+            output_vimage = output_raw_vimage.merge_image(self.data['output']['mask'])
         else:
-            output_img_merged = self.output_pixmap
-        self.lbl_out_img.setPixmap(output_img_merged)
+            output_vimage = output_raw_vimage
+        output_vimage.set_pixmap(self.lbl_out_img)
+        self.data['output']['raw_image'] = output_raw_vimage
+        self.data['output']['image'] = output_vimage
 
     def load_input_image(self):
         img = self.data['original']['image'].to_numpy()
@@ -342,10 +300,11 @@ class Example(QWidget):
             img = self.backend.crop_face(img)
         input_img, input_parsing_show = self.backend.set_input_img(img_rgb=img)
         self.data['original']['mask'] = VersImage.from_numpy(input_parsing_show)
+        self.data['output']['mask'] = self.data['original']['mask'] # Starting with output mask as in
         self.data['original']['image'].set_pixmap(self.lbl_input_img)
 
         self.data['original']['mask'].set_pixmap(self.lbl_input_seg)
-        self.refresh_slider()
+        self.refresh_slider_from_be(self.data['original'])
 
         self.lbl_out_img.setPixmap(QPixmap(None))
         self._update_rgb_btn()
@@ -377,36 +336,34 @@ class Example(QWidget):
         self.color_btns[color_idx].setStyleSheet(
             f"background-color: {list_palette[color_idx]};color: white; border: 3px solid #007bff")
 
-    def load_target_image(self, img_path):
-        img = read_rgb(img_path)
-        if self.need_crop:
-            img = self.backend.crop_face(img)
-        input_img, input_parsing_show = self.backend.set_target_img(img_rgb=img)
-        input_path = os.path.join(self.temp_path, 'target_img.png')
-        write_rgb(input_path, input_img)
-        self.lbl_target_img.setPixmap((QPixmap(input_path)))
 
-    def refresh_slider(self):
+    def refresh_slider_from_be(self, dict_to_update):
         idx = 0
         # color
         color_val = self.backend.get_color_be2fe()
+        dict_to_update['color_val'] = color_val
         for ii in range(4):
             self.val2sld[idx + ii].setValue(int(color_val[ii] * 100))
 
         # shape
         idx += len(self.label_color)
         shape_val = self.backend.get_shape_be2fe()
+        dict_to_update['shape_val'] = shape_val
         for ii in range(4):
             self.val2sld[idx + ii].setValue(int(shape_val[ii] * 100))
 
         # curliness
         idx += len(self.label_shape)
-        self.val2sld[idx].setValue(int(self.backend.get_curliness_be2fe() * 100))
+        curliness_val = self.backend.get_curliness_be2fe()
+        self.val2sld[idx].setValue(int(curliness_val * 100))
+        dict_to_update['curliness'] = curliness_val
+
         #  texture
         idx += len(self.label_curliness)
-        app_val = self.backend.get_texture_be2fe()
+        texture_val = self.backend.get_texture_be2fe()
+        dict_to_update['texture'] = texture_val
         for ii in range(2):
-            self.val2sld[idx + ii].setValue(int(app_val[ii] * 100))
+            self.val2sld[idx + ii].setValue(int(texture_val[ii] * 100))
 
     def evt_change_value(self, sld_v):
         """
