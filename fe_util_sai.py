@@ -131,7 +131,7 @@ class Example(QWidget):
         self.maximum_value = 2.0
         self.blending = True
         self.config_flexible_edit = False
-        self.config_enfore_identity_based_on_mask = False
+        self.config_enfore_identity_based_on_mask = True
         self.backend = Backend(self.maximum_value, blending=self.blending)
         self.target_size = 256
         self.present_resolution = 256
