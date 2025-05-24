@@ -12,7 +12,7 @@ import sys
 from vers_image import VersImage
 
 sys.path.append('.')
-sys.path.append('..\\')
+#sys.path.append('./external_code/my_cython')
 
 from global_value_utils import TEMP_FOLDER
 import os
@@ -102,6 +102,7 @@ class DragLabel(QLabel):
         super().mouseReleaseEvent(e)
         self.parent.is_overlay_segment_on_output = False
         if self.parent.config_flexible_edit:
+            self.generate_masks(self.parent.data['original']['mask'],self.parent.data['output']['mask'])
             self.parent.evt_output() # recalc output using CtrlHair
         else:
             # Get updated mask
@@ -119,6 +120,31 @@ class DragLabel(QLabel):
 
             output_vimage.set_pixmap(self.parent.lbl_out_img)
 
+        # Save
+        self.parent.data['original']['image'].resize((512,512)).image.save('D:/projects/output_images_data/original_image.jpg')
+        self.parent.data['output']['raw_image'].resize((512,512)).image.save('D:/projects/output_images_data/output_image.jpg')
+
+    def generate_masks(self, mask_org, mask_new):
+        # Inpaint mask should be B&W. Structure segmentation map for control net is colored: Skin-Red, Hair-Green, Clothes-Blue, Background-000
+        # Inpaint is joint mask from org | new masks
+        # Seg map is from mask_new
+        output_res = (512,512)
+        binary_mask_org = mask_org.to_numpy()[:, :, 2] > 127
+        binary_mask_new = mask_new.to_numpy()[:, :, 2] > 127
+        binary_mask_comb = np.logical_or(binary_mask_org, binary_mask_new)
+        # inpaint_mask_np = np.expand_dims(binary_mask_comb, 2).astype(int) * 255
+        inpaint_mask_np = binary_mask_comb.astype(int) * 255 
+        inpaint_vmask = VersImage.from_numpy(inpaint_mask_np.astype(np.uint8)).resize(output_res)
+
+        mask_new_np = mask_new.to_numpy()
+        mask_new_recolor_np = mask_new_np[:, :, [0, 2, 1]]
+        mask_new_recolor_np[:,:,2] = 0 # Zero background
+        seg_vmask = VersImage.from_numpy(mask_new_recolor_np.astype(np.uint8)).resize(output_res)
+
+        # Save
+        inpaint_vmask.image.save('D:/projects/output_images_data/inpaint_vmask1.jpg')
+        seg_vmask.image.save('D:/projects/output_images_data/segmap_vmask.jpg')
+
 
 class Example(QWidget):
     def __init__(self):
@@ -130,7 +156,7 @@ class Example(QWidget):
         self.temp_path = os.path.join(TEMP_FOLDER, 'demo_output')
         self.maximum_value = 2.0
         self.blending = True
-        self.config_flexible_edit = False
+        self.config_flexible_edit = True
         self.config_enfore_identity_based_on_mask = True
         self.backend = Backend(self.maximum_value, blending=self.blending)
         self.target_size = 256
