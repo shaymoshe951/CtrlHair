@@ -25,7 +25,7 @@ class Solver:
         self.cfg = cfg
 
         # model
-        if 'gen_mode' in cfg and cfg.gen_mode is 'eigengan':
+        if 'gen_mode' in cfg and cfg.gen_mode == 'eigengan':
             from color_texture_branch.model_eigengan import EigenGenerator
             self.gen = EigenGenerator(cfg)
         else:
@@ -155,7 +155,7 @@ class Solver:
                 loss_dict['lambda_cls_curliness'] = F.binary_cross_entropy(torch.sigmoid(cls_curliness),
                                                                       self.gan_in['curliness_label'].float() / 2 + 0.5)
 
-        if 'gen_mode' in cfg and cfg.gen_mode is 'eigengan':
+        if 'gen_mode' in cfg and cfg.gen_mode == 'eigengan':
             loss_dict['lambda_orthogonal'] = self.gen.orthogonal_regularizer_loss()
 
         for loss_d in [loss_dict]:

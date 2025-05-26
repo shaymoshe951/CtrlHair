@@ -9,6 +9,7 @@
 
 import sys
 
+from auto1111_if import shape_modification, color_modification
 from vers_image import VersImage
 
 sys.path.append('.')
@@ -102,8 +103,14 @@ class DragLabel(QLabel):
         super().mouseReleaseEvent(e)
         self.parent.is_overlay_segment_on_output = False
         if self.parent.config_flexible_edit:
-            self.generate_masks(self.parent.data['original']['mask'],self.parent.data['output']['mask'])
+            inpaint_mask, _ = self.generate_masks(self.parent.data['original']['mask'],self.parent.data['output']['mask'])
             self.parent.evt_output() # recalc output using CtrlHair
+            if self.parent.config_fix_shape_on_output:
+                new_output_image = shape_modification(self.parent.data['original']['image'],
+                                   self.parent.data['output']['raw_image'],
+                                   inpaint_mask)
+                self.parent.data['output']['raw_image'] = new_output_image
+                new_output_image.set_pixmap(self.parent.lbl_out_img)
         else:
             # Get updated mask
             current_vmask = self.parent.data['output']['mask']
@@ -120,8 +127,8 @@ class DragLabel(QLabel):
 
             output_vimage.set_pixmap(self.parent.lbl_out_img)
 
-        # Save
-        self.parent.data['original']['image'].resize((512,512)).image.save('D:/projects/output_images_data/original_image.jpg')
+        # # Save
+        # self.parent.data['original']['image'].resize((512,512)).image.save('D:/projects/output_images_data/original_image.jpg')
         self.parent.data['output']['raw_image'].resize((512,512)).image.save('D:/projects/output_images_data/output_image.jpg')
 
     def generate_masks(self, mask_org, mask_new):
@@ -141,10 +148,24 @@ class DragLabel(QLabel):
         mask_new_recolor_np[:,:,2] = 0 # Zero background
         seg_vmask = VersImage.from_numpy(mask_new_recolor_np.astype(np.uint8)).resize(output_res)
 
-        # Save
-        inpaint_vmask.image.save('D:/projects/output_images_data/inpaint_vmask1.jpg')
-        seg_vmask.image.save('D:/projects/output_images_data/segmap_vmask.jpg')
+        # # Save
+        # inpaint_vmask.image.save('D:/projects/output_images_data/inpaint_vmask1.jpg')
+        # seg_vmask.image.save('D:/projects/output_images_data/segmap_vmask.jpg')
+        return inpaint_vmask, seg_vmask
 
+def mask_image_to_binary_mask(mask_image):
+    """
+    Convert a mask image to a binary mask.
+    :param mask_image: A VersImage object containing the mask image.
+    :return: A binary mask as a numpy array.
+    """
+    # Convert the mask image to grayscale
+    gray_mask = mask_image.to_numpy()[:, :, 2]  # Assuming the 3rd channel is the hair
+    # Create a binary mask where non-zero values are set to 255
+    binary_mask = (gray_mask > 127).astype(np.uint8) * 255
+    binary_vmask = VersImage.from_numpy(binary_mask.astype(np.uint8))
+
+    return binary_vmask
 
 class Example(QWidget):
     def __init__(self):
@@ -158,6 +179,7 @@ class Example(QWidget):
         self.blending = True
         self.config_flexible_edit = True
         self.config_enfore_identity_based_on_mask = True
+        self.config_fix_shape_on_output = True
         self.backend = Backend(self.maximum_value, blending=self.blending)
         self.target_size = 256
         self.present_resolution = 256
@@ -285,8 +307,14 @@ class Example(QWidget):
         hsv_colors = hsv_vals[0]*360.0, hsv_vals[1]*255.0,hsv_vals[2]*255.0
         for idx, val in enumerate(hsv_colors):
             self.backend.cur_latent.color['hsv'][0][idx] = val
-        self.evt_output()
+        # self.evt_output()
         self._update_rgb_btn()
+        color_name = btn.property("tag")
+        print('Selected color:', color_name)
+        output_image = color_modification(self.data['original']['image'],
+                                          mask_image_to_binary_mask(self.data['original']['mask']),
+                                          color_name)
+        output_image.set_pixmap(self.lbl_out_img)
 
     def evt_open_input(self):
         fname = QFileDialog.getOpenFileName(self, 'Open image file')

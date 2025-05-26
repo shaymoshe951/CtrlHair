@@ -115,7 +115,7 @@ def back_process(cfg):
             predictor_config.back_process(pred_cfg)
             cfg.predictor[ke] = pred_cfg
 
-    if 'gen_mode' in cfg and cfg.gen_mode is 'eigengan':
+    if 'gen_mode' in cfg and cfg.gen_mode == 'eigengan':
         cfg.subspace_dim = cfg.noise_dim // cfg.g_hidden_layer_num
 
 

@@ -94,8 +94,10 @@ ip_adapter_image = init_image # encode_image("C:/Users/Lab/Downloads/my_pics/Sha
 payload = {
     "init_images": [init_image],
     "mask": mask_image,
-    "prompt": "cinematic photo. 35mm photograph, film, bokeh, professional, 4k, highly detailed",
-    "negative_prompt": "drawing, painting, crayon, sketch, graphite, impressionist, noisy, blurry, soft, deformed",
+    # "prompt": "cinematic photo. 35mm photograph, film, bokeh, professional, 4k, highly detailed",
+    # "negative_prompt": "drawing, painting, crayon, sketch, graphite, impressionist, noisy, blurry, soft, deformed",
+    "prompt": "Modify the shape of the source image based on the reference shape.",
+    "negative_prompt": "No unwanted artifacts, maintain original style.",
     "steps": 30,
     "sampler_name": "DPM++ 2M Karras",
     "cfg_scale": 5.5,
