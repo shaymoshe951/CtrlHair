@@ -169,7 +169,7 @@ def mask_image_to_binary_mask(mask_image):
 
     return binary_vmask
 
-class Example(QWidget):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
@@ -320,13 +320,14 @@ class Example(QWidget):
         # whole_vbox.addLayout(self.grid2)
         whole_vbox.addWidget(tabs)
 
-        self.setLayout(whole_vbox)
+        container = QWidget()
+        container.setLayout(whole_vbox)
+        container .setLayout(whole_vbox)
         self.setGeometry(100, 100, 900, 600)
         self.setWindowTitle('Change Hair Style')
+        self.setCentralWidget(container)
 
         self.is_overlay_segment_on_output = False
-
-        self.show()
 
     def evt_push_controls(self):
         self.is_overlay_segment_on_output = not self.is_overlay_segment_on_output
@@ -351,20 +352,18 @@ class Example(QWidget):
         if mask is None:
             print('No mask found. Using original mask')
             mask = self.data['original']['mask']
-        self.worker = AsyncOperationWorker(color_modification, get_progress ,
+        self.worker = AsyncOperationWorker(color_modification, get_progress, self,
                                            self.data['original']['image'], mask_image_to_binary_mask(mask), color_name)
         self.worker.result_ready.connect(self.evt_image_generation_result)
-        self.worker.progress_changed.connect(self.evt_progress_changed)
         self.worker.start()
+        run_progress_tmp(self, self.worker)
         # output_image = color_modification(self.data['original']['image'],
         #                                   mask_image_to_binary_mask(mask),
         #                                   color_name)
 
-
-    def evt_progress_changed(self, value):
-        print("Progress changed:", value)
-
     def evt_image_generation_result(self, result_image):
+        self.setEnabled(True)
+        self.progress_dialog.close()
         self.data['output']['raw_image'] = result_image
         result_image.set_pixmap(self.lbl_out_img)
 
@@ -507,7 +506,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 def main():
     app = QApplication(sys.argv)
-    ex = Example()
+    main_window  = MainWindow()
+    main_window.show()
     sys.exit(app.exec_())
 
 
