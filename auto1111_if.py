@@ -170,4 +170,10 @@ def get_progress():
     progress = int(data['progress'] * 100)
     return progress
 
-
+def cancell_process():
+    API_URL = "http://127.0.0.1:7860/sdapi/v1/interrupt"
+    r = requests.post(API_URL)
+    if r.status_code == 200:
+        print("Process cancelled successfully.")
+    else:
+        print(f"Failed to cancel process: {r.status_code} - {r.text}")

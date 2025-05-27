@@ -9,7 +9,7 @@
 
 import sys
 
-from auto1111_if import shape_modification, color_modification, get_progress
+import auto1111_if
 from vers_image import VersImage
 
 sys.path.append('.')
@@ -108,7 +108,7 @@ class DragLabel(QLabel):
             inpaint_mask, _ = self.generate_masks(self.parent.data['original']['mask'],self.parent.data['output']['mask'])
             self.parent.evt_output() # recalc output using CtrlHair
             if self.parent.config_fix_shape_on_output:
-                new_output_image = shape_modification(self.parent.data['original']['image'],
+                new_output_image = auto1111_if.shape_modification(self.parent.data['original']['image'],
                                    self.parent.data['output']['raw_image'],
                                    inpaint_mask)
                 self.parent.data['output']['raw_image'] = new_output_image
@@ -352,18 +352,20 @@ class MainWindow(QMainWindow):
         if mask is None:
             print('No mask found. Using original mask')
             mask = self.data['original']['mask']
-        self.worker = AsyncOperationWorker(color_modification, get_progress, self,
-                                           self.data['original']['image'], mask_image_to_binary_mask(mask), color_name)
-        self.worker.result_ready.connect(self.evt_image_generation_result)
-        self.worker.start()
-        run_progress_tmp(self, self.worker)
+        self.worker = OperationWorker(auto1111_if.color_modification, (self.data['original']['image'], mask_image_to_binary_mask(mask), color_name),
+                                      auto1111_if.get_progress, auto1111_if.cancell_process, self.evt_image_generation_result,
+                                      self)
+        self.worker.execute()
+        # self.worker = AsyncOperationWorker(auto1111_if.color_modification, auto1111_if.get_progress, self,
+        #                                    self.data['original']['image'], mask_image_to_binary_mask(mask), color_name)
+        # self.worker.result_ready.connect(self.evt_image_generation_result)
+        # self.worker.start()
+        # run_progress_tmp(self, self.worker.agent_progress_status)
         # output_image = color_modification(self.data['original']['image'],
         #                                   mask_image_to_binary_mask(mask),
         #                                   color_name)
 
     def evt_image_generation_result(self, result_image):
-        self.setEnabled(True)
-        self.progress_dialog.close()
         self.data['output']['raw_image'] = result_image
         result_image.set_pixmap(self.lbl_out_img)
 
