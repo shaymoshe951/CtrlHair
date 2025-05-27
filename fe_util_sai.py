@@ -108,11 +108,19 @@ class DragLabel(QLabel):
             inpaint_mask, _ = self.generate_masks(self.parent.data['original']['mask'],self.parent.data['output']['mask'])
             self.parent.evt_output() # recalc output using CtrlHair
             if self.parent.config_fix_shape_on_output:
-                new_output_image = auto1111_if.shape_modification(self.parent.data['original']['image'],
-                                   self.parent.data['output']['raw_image'],
-                                   inpaint_mask)
-                self.parent.data['output']['raw_image'] = new_output_image
-                new_output_image.set_pixmap(self.parent.lbl_out_img)
+                # new_output_image = auto1111_if.shape_modification(self.parent.data['original']['image'],
+                #                    self.parent.data['output']['raw_image'],
+                #                    inpaint_mask)
+                # self.parent.data['output']['raw_image'] = new_output_image
+                # new_output_image.set_pixmap(self.parent.lbl_out_img)
+                self.worker = OperationWorker(auto1111_if.shape_modification,
+                              (self.parent.data['original']['image'],
+                                                  self.parent.data['output']['raw_image'],
+                                                  inpaint_mask),
+                                              auto1111_if.get_progress, auto1111_if.cancell_process,
+                                              self.parent.evt_image_generation_result,
+                                              self.parent)
+                self.worker.execute()
         else:
             # Get updated mask
             current_vmask = self.parent.data['output']['mask']
@@ -131,7 +139,7 @@ class DragLabel(QLabel):
 
         # # Save
         # self.parent.data['original']['image'].resize((512,512)).image.save('D:/projects/output_images_data/original_image.jpg')
-        self.parent.data['output']['raw_image'].resize((512,512)).image.save('D:/projects/output_images_data/output_image.jpg')
+        # self.parent.data['output']['raw_image'].resize((512,512)).image.save('D:/projects/output_images_data/output_image.jpg')
 
     def generate_masks(self, mask_org, mask_new):
         # Inpaint mask should be B&W. Structure segmentation map for control net is colored: Skin-Red, Hair-Green, Clothes-Blue, Background-000
@@ -356,14 +364,6 @@ class MainWindow(QMainWindow):
                                       auto1111_if.get_progress, auto1111_if.cancell_process, self.evt_image_generation_result,
                                       self)
         self.worker.execute()
-        # self.worker = AsyncOperationWorker(auto1111_if.color_modification, auto1111_if.get_progress, self,
-        #                                    self.data['original']['image'], mask_image_to_binary_mask(mask), color_name)
-        # self.worker.result_ready.connect(self.evt_image_generation_result)
-        # self.worker.start()
-        # run_progress_tmp(self, self.worker.agent_progress_status)
-        # output_image = color_modification(self.data['original']['image'],
-        #                                   mask_image_to_binary_mask(mask),
-        #                                   color_name)
 
     def evt_image_generation_result(self, result_image):
         self.data['output']['raw_image'] = result_image
