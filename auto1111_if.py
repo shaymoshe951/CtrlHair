@@ -163,3 +163,11 @@ def color_modification(source_image, inpaint_mask_bw_image, color_text, resoluti
     return vimage
 
 
+def get_progress():
+    API_URL = "http://127.0.0.1:7860/sdapi/v1/progress"
+    r = requests.get(API_URL)
+    data = r.json()
+    progress = int(data['progress'] * 100)
+    return progress
+
+

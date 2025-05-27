@@ -9,7 +9,7 @@
 
 import sys
 
-from auto1111_if import shape_modification, color_modification
+from auto1111_if import shape_modification, color_modification, get_progress
 from vers_image import VersImage
 
 sys.path.append('.')
@@ -22,13 +22,15 @@ from ui.backend import Backend
 from util.imutil import read_rgb, write_rgb
 
 from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QApplication, QLabel, QGridLayout, \
-    QSlider, QFileDialog, QGraphicsPixmapItem
+    QSlider, QFileDialog, QGraphicsPixmapItem, QTabWidget, QCheckBox
 from PyQt5.QtGui import QPixmap, QImage, QFont, QPainter, QMouseEvent, QPalette, QColor
 from PyQt5.QtCore import Qt
+from ui.ui_async_operations import *
+
 import colorsys
 import numpy as np
 from sai_if import change_style
-from PIL import Image
+from PIL import Image, ImageOps
 
 # Define hair color palettes
 PALETTES = {
@@ -279,10 +281,44 @@ class Example(QWidget):
             self.color_btns.append(btn)
             self.gridColors.addWidget(btn, idx // cols, idx % cols)
 
+        # Adding a checkbox for resizing, default is True
+        self.checkbox_resize = QCheckBox('Resize to GR', checked=True)
+
+        # Create the tab widget
+        tabs = QTabWidget()
+
+        # Create tab 1
+        tab1 = QWidget()
+        tab1_layout = QVBoxLayout()
+        tab1_layout.addLayout(self.grid2) #QLabel("This is Tab 1")
+        tab1.setLayout(tab1_layout)
+
+        # Create tab 2
+        tab2 = QWidget()
+        tab2_layout = QVBoxLayout()
+        tab2_layout.addLayout(self.gridColors)
+        tab2.setLayout(tab2_layout)
+
+        # Create tab 3
+        tab3 = QWidget()
+        tab3_layout = QVBoxLayout()
+        tab3_layout.addWidget(self.checkbox_resize)
+        tab3.setLayout(tab3_layout)
+
+        # Add tabs
+        tabs.addTab(tab1, "Hair Shape")
+        tabs.addTab(tab2, "Colors")
+        tabs.addTab(tab3, "Advanced")
+
+        # # Add the tab widget to the main layout
+        # layout.addWidget(tabs)
+        # self.setLayout(layout)
+
         whole_vbox = QVBoxLayout(self)
         whole_vbox.addLayout(self.grid1)
-        whole_vbox.addLayout(self.gridColors)
-        whole_vbox.addLayout(self.grid2)
+        # whole_vbox.addLayout(self.gridColors)
+        # whole_vbox.addLayout(self.grid2)
+        whole_vbox.addWidget(tabs)
 
         self.setLayout(whole_vbox)
         self.setGeometry(100, 100, 900, 600)
@@ -311,10 +347,26 @@ class Example(QWidget):
         self._update_rgb_btn()
         color_name = btn.property("tag")
         print('Selected color:', color_name)
-        output_image = color_modification(self.data['original']['image'],
-                                          mask_image_to_binary_mask(self.data['original']['mask']),
-                                          color_name)
-        output_image.set_pixmap(self.lbl_out_img)
+        mask = self.data['output']['mask']
+        if mask is None:
+            print('No mask found. Using original mask')
+            mask = self.data['original']['mask']
+        self.worker = AsyncOperationWorker(color_modification, get_progress ,
+                                           self.data['original']['image'], mask_image_to_binary_mask(mask), color_name)
+        self.worker.result_ready.connect(self.evt_image_generation_result)
+        self.worker.progress_changed.connect(self.evt_progress_changed)
+        self.worker.start()
+        # output_image = color_modification(self.data['original']['image'],
+        #                                   mask_image_to_binary_mask(mask),
+        #                                   color_name)
+
+
+    def evt_progress_changed(self, value):
+        print("Progress changed:", value)
+
+    def evt_image_generation_result(self, result_image):
+        self.data['output']['raw_image'] = result_image
+        result_image.set_pixmap(self.lbl_out_img)
 
     def evt_open_input(self):
         fname = QFileDialog.getOpenFileName(self, 'Open image file')
@@ -343,9 +395,18 @@ class Example(QWidget):
         self.data['output']['image'] = output_vimage
 
     def load_input_image(self):
+        if self.checkbox_resize.isChecked():
+            old_ratio = 1.2
+            new_ratio = (1.6+old_ratio) / 2.0
+            nw = int(self.data['original']['image'].image.width * new_ratio / old_ratio)
+            # Create a new blank RGB image with black padding
+            pad_width_offset = (nw - self.data['original']['image'].image.width) // 2
+            padded_img = ImageOps.expand(self.data['original']['image'].image, border=(pad_width_offset, 0, pad_width_offset, 0), fill='black')
+            self.data['original']['image'] = VersImage.from_image(padded_img).resize((self.present_resolution, self.present_resolution))
         img = self.data['original']['image'].to_numpy()
         if self.need_crop:
             img = self.backend.crop_face(img)
+
         input_img, input_parsing_show = self.backend.set_input_img(img_rgb=img)
         self.data['original']['mask'] = VersImage.from_numpy(input_parsing_show)
         self.data['output']['mask'] = self.data['original']['mask'] # Starting with output mask as in
