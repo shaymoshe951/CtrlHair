@@ -89,3 +89,6 @@ class VersImage():
 
     def resize(self, resolution):
         return VersImage.from_image(self.image.resize(resolution))
+
+    def to_pil(self):
+        return self.image

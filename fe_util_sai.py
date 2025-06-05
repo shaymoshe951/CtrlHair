@@ -138,8 +138,8 @@ class DragLabel(QLabel):
             output_vimage.set_pixmap(self.parent.lbl_out_img)
 
         # # Save
-        # self.parent.data['original']['image'].resize((512,512)).image.save('D:/projects/output_images_data/original_image.jpg')
-        # self.parent.data['output']['raw_image'].resize((512,512)).image.save('D:/projects/output_images_data/output_image.jpg')
+        self.parent.data['original']['image'].resize((512,512)).image.save('D:/projects/output_images_data/original_image.jpg')
+        self.parent.data['output']['raw_image'].resize((512,512)).image.save('D:/projects/output_images_data/output_image.jpg')
 
     def generate_masks(self, mask_org, mask_new):
         # Inpaint mask should be B&W. Structure segmentation map for control net is colored: Skin-Red, Hair-Green, Clothes-Blue, Background-000
@@ -159,8 +159,8 @@ class DragLabel(QLabel):
         seg_vmask = VersImage.from_numpy(mask_new_recolor_np.astype(np.uint8)).resize(output_res)
 
         # # Save
-        # inpaint_vmask.image.save('D:/projects/output_images_data/inpaint_vmask1.jpg')
-        # seg_vmask.image.save('D:/projects/output_images_data/segmap_vmask.jpg')
+        inpaint_vmask.image.save('D:/projects/output_images_data/inpaint_vmask1.jpg')
+        seg_vmask.image.save('D:/projects/output_images_data/segmap_vmask.jpg')
         return inpaint_vmask, seg_vmask
 
 def mask_image_to_binary_mask(mask_image):
